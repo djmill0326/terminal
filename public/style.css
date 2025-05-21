@@ -1,0 +1,362 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    height: 100svh;
+    overflow: hidden;
+    background-color: #111;
+}
+
+.hide {
+    display: none;
+}
+
+.term-root {
+    padding: 1rem;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    background-color: #111;
+    color: #eee;
+    font-family: "Cascadia Code", monospace;
+    font-size: 13px;
+    overflow-x: hidden;
+}
+
+.term-titlebar {
+    border-bottom: 1px solid #222;
+    padding: 0.25rem;
+}
+
+.term-title {
+    font-size: 1.1rem;
+}
+
+.term-display {
+    padding: 0.5rem;
+    overflow-x: visible;
+    display: flex;
+    flex-direction: row;
+    flex-grow: 1;
+    min-height: 0;
+    animation-duration: 200ms;
+    animation-timing-function: ease-out;
+    animation-fill-mode: forwards;
+}
+
+@keyframes slideTabsLeft {
+    from { transform: translateX(0%) }
+    to { transform: translateX(calc(-50% - 1.5rem)) }
+}
+
+@keyframes slideTabsRight {
+    from { transform: translateX(calc(-50% + .5rem)) }
+    to { transform: translateX(2rem) }
+}
+
+.term-display.exit-left, .term-display.exit-right {
+    width: calc(200% - 1rem);
+}
+
+.term-display.exit-left {
+    animation-name: slideTabsLeft;
+}
+
+.term-display.exit-right {
+    animation-name: slideTabsRight;
+}
+
+.term-display.exit-left > .term-output:first-child {
+    opacity: 0;
+}
+
+.term-display.exit-left > .term-output:last-child {
+    transform: translateX(2rem);
+}
+
+.term-display.exit-right > .term-output:first-child {
+    transform: translateX(-2rem);
+}
+
+.term-display.exit-right > .term-output:last-child {
+    opacity: 0;
+}
+
+.term-output {
+    line-height: 1.2rem;
+    width: 100%;
+    transition: opacity 250ms ease-in;
+    opacity: 1;
+    overflow-y: auto;
+    scrollbar-width: none;
+    outline: none!important;
+    white-space: pre;
+}
+
+.term-output.panel, .term-grid, .term-pane {
+    display: flex;
+}
+
+.term-output.panel {
+    flex-direction: column;
+}
+
+.term-grid, .term-pane {
+    min-width: 0;
+    min-height: 0;
+    flex: 1 0;
+}
+
+.term-pane {
+    border: 1px dashed #333;
+    overflow-y: scroll;
+    scrollbar-width: none;
+    padding: .25rem;
+}
+
+.term-pane.active {
+    border: 1px solid #333;
+}
+
+.term-pane.active:not(:has( .term-pane)) {
+    border: 1px solid #ccc;
+}
+
+.term-pane:not(.active) .term-pane {
+    border: 1px dashed #333;
+}
+
+.term-command {
+    display: flex;
+    word-break: break-all;
+}
+
+.term-text {
+    flex-grow: 1;
+    min-width: 0;
+}
+
+.term-text.muted {
+    color: #999;
+}
+
+.term-line {
+    text-wrap: auto;
+}
+
+.term-time {
+    color: #666;
+    min-width: 5rem;
+    text-align: right;
+}
+
+.term-input {
+    border: 2px solid #333;
+    border-radius: 0.25rem;
+    padding: 0.5rem;
+    bottom: 1rem;
+    width: 100%;
+    > input {
+        outline: none;
+        background-color: inherit;
+        color: inherit;
+        font-family: inherit;
+        padding: 0;
+        border: none;
+    }
+}
+
+.term-prefix {
+    user-select: none;
+}
+
+.term-prefix::after {
+    content: " $ ";
+    color: #666;
+}
+
+.term-scroll-button,
+.term-tab-scroll {
+    border: none;
+    outline: none;
+    background: none;
+    color: #666;
+    font-family: inherit;
+}
+
+.term-scroll-button {
+    position: absolute;
+    bottom: 1.6rem;
+    right: 1.4rem;
+    z-index: 1;
+}
+
+.term-header {
+    display: flex;
+    align-items: center;
+    user-select: none;
+}
+
+@media (max-width: 40rem) {
+    .term-header {
+        flex-wrap: wrap;
+    }
+
+    .term-tab-nav {
+        margin-top: .25rem;
+    }
+}
+
+.term-title {
+    flex-grow: 2;
+    flex-shrink: 0;
+}
+
+.term-tab-info {
+    color: #666;
+    display: inline;
+    margin: 0 .25rem 0 .5rem;
+    text-overflow: ellipsis;
+    text-wrap: nowrap;
+    overflow: hidden;
+    transition: all .2s;
+}
+
+.term-tab-info:hover {
+    flex-shrink: 0;
+}
+
+.term-tab-nav.basic {
+    display: inline-flex;
+    min-width: 0;
+}
+
+.term-tab-nav.columnar {
+    display: flex;
+}
+
+.term-header .term-tab-nav.columnar {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    width: 10rem;
+    max-height: calc(100svh - 5rem);
+}
+
+.term-root:has(> .term-header > .term-tab-nav.columnar) {
+    width: calc(100% - 12rem);
+    .term-div {
+        position: fixed;
+        top: 1rem;
+        right: 12rem;
+        height: calc(100svh - 2rem);
+        width: 0;
+        border: 1px dashed #333;
+    }
+}
+
+.term-tabs {
+    display: flex;
+    align-items: center;
+    scrollbar-width: none;
+    overflow-x: scroll;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    gap: .25rem;
+}
+
+.columnar .term-tabs {
+    flex-direction: column;
+    align-items: stretch;
+    padding: .5rem;
+    border: 1px solid #333;
+    border-radius: .25rem;
+    width: 100%;
+    span {
+        color: transparent!important;
+        margin-top: .25rem;
+        border-top: 1px dashed #ccc;
+        height: .25rem;
+    }
+}
+
+.term-tab-anchor {
+    color: #ccc;
+    text-decoration: none;
+    border: 1px solid #333;
+    border-radius: .25rem;
+    padding: .25rem;
+    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    text-wrap: nowrap;
+}
+
+.term-tab-anchor:focus {
+    z-index: 1;
+}
+
+.invert .term-tab-anchor {
+    background-color: #ccc;
+    color: #333;
+    cursor: not-allowed!important;
+}
+
+.term-tab-anchor.active {
+    background-color: mediumvioletred;
+    color: white!important;
+    cursor: default;
+}
+
+.invert .term-tab-anchor.active {
+    background-color: crimson;
+}
+
+.term-tab-scroll {
+    width: 1.25rem;
+    animation-fill-mode: forwards;
+    animation-duration: .2s;
+    opacity: 1;
+    flex-shrink: 0;
+}
+
+@keyframes revealLeft {
+    from { margin-right: -1.25rem; opacity: 0 };
+    to { margin-right: 0rem; };
+}
+
+@keyframes revealRight {
+    from { margin-left: -1.25rem; opacity: 0 };
+    to { margin-left: 0rem };
+}
+
+@keyframes exitLeft {
+    from { margin-right: 0rem }
+    to { margin-right: -1.25rem; opacity: 0 }
+}
+
+@keyframes exitRight {
+    from { margin-left: 0rem }
+    to { margin-left: -1.25rem; opacity: 0 }
+}
+
+.term-tab-scroll.left {
+    animation-name: revealLeft;
+}
+
+.term-tab-scroll.right {
+    animation-name: revealRight;
+}
+
+.term-tab-scroll.left.exit {
+    animation-name: exitLeft;
+}
+
+.term-tab-scroll.right.exit {
+    animation-name: exitRight;
+}

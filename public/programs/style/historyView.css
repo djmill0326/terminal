@@ -1,0 +1,31 @@
+.history-entry {
+    cursor: pointer;
+}
+
+.history-type {
+    padding-right: .5rem;
+    vertical-align: baseline;
+}
+
+.history-description {
+    color: #666;
+    text-wrap: wrap;
+    text-wrap-style: pretty;
+}
+
+.tab-list {
+    position: fixed;
+    bottom: 4rem;
+    background-color: white;
+    color: #333;
+    cursor: pointer;
+    user-select: none;
+}
+
+.tab-anchor {
+    padding: .25rem;
+}
+
+.active {
+    color: mediumvioletred;
+}
