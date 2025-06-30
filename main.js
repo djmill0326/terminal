@@ -22,20 +22,11 @@ const HELP_LIST = Object.values(HELP_MESSAGES);
 const MAX_HELP_LENGTH = HELP_LIST.reduce((a, b) => Math.max(a, b[0].length), 0);
 const HELP_STRING = HELP_LIST.map(entry => entry[0] + " ".repeat(MAX_HELP_LENGTH - entry[0].length) + " | " + entry[1]).join("\n");
 
-const programs = new Map();
+import { programs, registerProgram } from "./base.js";
+import "./claude-programs/accumulator.js";
+import "./claude-programs/picker.js";
+
 const sessionData = new Map();
-
-function registerProgram(name, handlers, description) {
-    const handlerText = {};
-    for (const [name, f] of Object.entries(handlers)) handlerText[name] = f.toString();
-    programs.set(name, {
-        name,
-        PID: 1,
-        handlers: handlerText,
-        description: description || "No description",
-    });
-}
-
 function handleProc(socket, data, op) {
     if (!data.payload) data.payload = [];
     const session = sessionData.get(socket.id);
@@ -59,7 +50,8 @@ function handleProc(socket, data, op) {
                     sendDefault(text) { send(socket, text) },
                     sendEvent(type, data) { socket.emit(`proc:event`, { type, data, name: this.name, PID: this.PID }) },
                     call(hook, payload={}) { handleProc(socket, { name: `${this.name}-${this.PID}`, payload }, hook) },
-                    example(text) { return `Callback, bitch. ${text}` }
+                    example(text) { return `Callback, bitch. ${text}` },
+                    share(data) { this.sendEvent("share", data) }
                 };
                 if (!procObject.callables) procObject.callables = new Map(Object.entries(process).filter(([_, v]) => typeof v === "function").map(([name, f]) => [name, f.toString().includes("return")]));
                 process.worker = new Worker("./processWorker.js", { workerData: procObject });
@@ -86,7 +78,8 @@ function handleProc(socket, data, op) {
             } else send(socket, `Program name '${data.name}' is not recognized.\nType 'list-programs' to see available options.`);
             break;
         case "update":
-            session.activeProcesses.get(data.name)?.worker.postMessage({ type: "call", name: "update", payload: data.payload });
+        case "share":
+            session.activeProcesses.get(data.name)?.worker.postMessage({ type: op === "share" ? "share" : "call", name: op, payload: data.payload });
             break;
         case "destroy": {
             const process = session.activeProcesses.get(data.name);
@@ -132,6 +125,7 @@ io.on("connection", (socket) => {
     socket.on("proc:init", data => handleProc(socket, data, "init"));
     socket.on("proc:update", data => handleProc(socket, data, "update"));
     socket.on("proc:destroy", data => handleProc(socket, data, "destroy"));
+    socket.on("proc:share", data => handleProc(socket, data, "share"));
 
     socket.on("disconnect", (reason) => {
         session.activeProcesses.forEach(process => process.call("destroy"));

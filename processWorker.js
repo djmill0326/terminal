@@ -42,5 +42,11 @@ parentPort.on("message", async data => {
             await callback(data.result);
             callbacks.delete(data.id);
             break;
+        case "update":
+            handlers.update(data.payload);
+            break;
+        case "share":
+            handlers.update(null, data.payload);
+            break;
     }
 });

@@ -11,6 +11,8 @@ const colorSet = [
     "palevioletred"
 ].reverse();
 
+/* helper functions (may be stateful, per function or globally) */
+
 let paletteIndex = -1;
 export function color() {
     if (++paletteIndex === colorSet.length) paletteIndex = 0;
@@ -57,6 +59,8 @@ export function parseCommand(text, validator) {
     const [type, ...args] = argBuffer;
     if (!validator || validator(type, args)) return { type, args };
 }
+
+/* UI elements */
 
 export function createTerminalOutput(data) {
     const output = document.createElement("div");
@@ -168,6 +172,8 @@ export function createGroup(name, tabs=[], selected=null, onSelect=()=>{}) {
     return group;
 }
 
+/* scroll handling (verbose and annoying) */
+
 export function createScrollButton(tab) {
     const button = document.createElement("button");
     button.textContent = "Return to bottom ▼";
@@ -175,6 +181,8 @@ export function createScrollButton(tab) {
     button.addEventListener("click", tab.scrollback.scrollToBottom);
     return button;
 }
+
+/* scroll animations (smooth) */
 
 const animationIds = new Map();
 export function animateScroll(element, x, y, duration=100) {
@@ -225,6 +233,20 @@ export function createSmoothScroller(target, x, y, accelX, accelY, minimumDistan
     });
     return element;
 };
+
+export function autorun(context={}, outputFunc) {
+    const initFunc = new Function(`return ${localStorage.autorun ?? "()=>{}"}`)();
+    const result = initFunc(context, performance.now());
+    if (outputFunc) outputFunc(result);
+    return !localStorage.autorun?.length;
+}
+
+export function updateAutorun(initFunc) {
+    if (typeof initFunc !== "function") throw Error("Autorun must be a function.");
+    localStorage.autorun = initFunc;
+}
+
+/* feature hooks */
 
 export async function useTabScrolling(tabSelector) {
     const tabNavigation = tabSelector.parentElement;
@@ -522,6 +544,14 @@ export function useTimeTravel(eventTypes) {
         },
         unwatch(callback) {
             watchers.delete(callback);
+        },
+        redirect(operation, type, data) {
+            const savedIndex = index;
+            index = eventHistory.length;
+            this.pushEvent(type, data);
+            handleRestore(operation, eventHistory.length - 1);
+            eventHistory.pop();
+            index = savedIndex;
         }
     };
 }

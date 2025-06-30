@@ -1,4 +1,4 @@
-import { parseCommand, createTab, initDB, createScrollButton, useTimeTravel, useTabScrolling, BASE_ANIMATION_TIME, createGroup } from "./helpers.js";
+import { parseCommand, createTab, initDB, createScrollButton, useTimeTravel, useTabScrolling, BASE_ANIMATION_TIME, createGroup, autorun, updateAutorun } from "./helpers.js";
 import createHistoryView from "./programs/historyView.js";
 import { destroy, mount } from "./ui/builder.js";
 
@@ -62,7 +62,10 @@ const stateManager = useTimeTravel({
     tabClose: {
         suppressEvents: ["tabClose", "tabRestore", "tabChange"],
         undo({ tab, index, wasActive }) {
-            restoreTab(tab, index, wasActive);
+            // restoreTab could technically handle this.
+            // want to show off the event redirection system.
+            if (tab.tabs) stateManager.redirect("redo", "tabMerge", tab);
+            else restoreTab(tab, index, wasActive);
         },
         async redo({ tab }) {
             await closeTab(tab);
@@ -176,12 +179,12 @@ const initClientProcess = async (options, ...args) => {
     const procObject = programs.get(name);
     if (!procObject) return;
     const process = {
+        init: () => {},
+        update: () => {},
+        destroy: () => {},
         name: procObject.name,
         title: options.title ?? procObject.title ?? procObject.name,
         PID: procObject.PID--,
-        init: () => {},
-        update: () => {},
-        destroy: () => {}
     };
     for (let [name, f] of Object.entries(procObject.handlers)) {
         if (name === "init") {
@@ -219,7 +222,7 @@ registerProgram("render", {
     }
 }, "UI Component Process");
 
-const processCommand = async (command, mode) => {
+const processCommand = async (command, mode="default") => {
     if (mode !== "default") return;
     switch (command.type) {
         case "run":
@@ -267,6 +270,12 @@ window.addEventListener("keydown", async ev => {
                 if (!await processCommand(parsedCommand, mode))
                     socket.emit(`${mode}:command`, parsedCommand);
             } else print({ text: "Invalid command. Type help for a list of commands.", mode: state.activeTab.mode  });
+        } else {
+            const i = mode.lastIndexOf("-");
+            if (i > 0 && mode[i - 1] !== "-") {
+                const parsedCommand = parseCommand(text, commandValidators[mode]);
+                socket.emit("proc:update", { name: mode, payload: parsedCommand });
+            }
         }
         activeProcesses.get(mode)?.update("input", text);
         input.placeholder = text;
@@ -344,7 +353,6 @@ const updateTabUI = () => {
         selector.addEventListener("click", async ev => {
             if (!snapped) ev.preventDefault();
             else if (ev.ctrlKey) {
-                console.log("yea what?");
                 await closeTab(tab);
                 ev.preventDefault();
             } else if (ev.shiftKey && tab !== state.activeTab) {
@@ -546,8 +554,8 @@ const closeTab = async (tab, asHistory=false) => {
     }
     const index = state.tabList.findIndex(x => x === tab);
     if (tab.tabs) {
-        [...tab.tabs].sort((a, b) => a.slot - b.slot).forEach(tab => {
-            state.tabList.splice(tab.slot, 0, tab);
+        [...tab.tabs].sort((a, b) => a.slot - b.slot).forEach(tab => {``
+            state.tabList.splice(tab.slot + 1, 0, tab);
             delete tab.slot;
         });
         setActiveTab(asHistory ? tab.initiator : tab.activeTab, true, true);
@@ -611,6 +619,7 @@ const restoreTab = (tab, index, wasActive) => {
 const newTab = async (name, mode, PID) => {
     const tab = await createTab(name, mode, input, PID ? null : db);
     tab.PID = PID;
+    tab.share = data => socket.emit("proc:share", { name: tab.mode, payload: data });
     const el = tab.element;
     el.addEventListener("scroll", ev => {
         tab.scrollback.update(ev);
@@ -647,7 +656,21 @@ socket.on("proc:event", ({ type, data, name, PID }) => {
             const tabAnchor = tabSelector.querySelector(`[href="#${mode}"]`)
             if (tabAnchor) tabAnchor.textContent = data;
             break;
+        case "share":
+            if (data.target) state.tabList.filter(t => t.name === data.target).forEach(t => t.share(data));
+            else state.tabs.get(mode)?.share(data);
     }
 });
 
-setTimeout(() => input.focus(), 0);
+const defaultInit = ({ processCommand }) => {
+    processCommand({ type: "run", args: ["clock"] });
+}
+
+queueMicrotask(() => {
+    const context = { ...state, processCommand };
+    if (autorun(context)) {
+        updateAutorun(defaultInit);
+        autorun(context);
+    };
+    input.focus();
+});

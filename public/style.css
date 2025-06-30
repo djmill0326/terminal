@@ -159,7 +159,8 @@ body {
     border-radius: 0.25rem;
     padding: 0.5rem;
     bottom: 1rem;
-    width: 100%;
+    display: flex;
+    gap: .66em;
     > input {
         outline: none;
         background-color: inherit;
@@ -167,6 +168,7 @@ body {
         font-family: inherit;
         padding: 0;
         border: none;
+        flex-grow: 1;
     }
 }
 
